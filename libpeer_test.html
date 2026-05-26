@@ -52,7 +52,7 @@
       </div>
     </div>
     <div class="row g-4">
-      <div class="col-md-6">
+      <div class="col-md-6 d-none">
         <div class="p-3 border bg-light text-center">
           <h5>Video</h5>
           <video controls id="video-stream" class="w-100" style="max-height: 400px; display: none">
@@ -63,7 +63,7 @@
       </div>
 
       <div class="col-md-6">
-        <div class="p-3 border bg-light text-center mb-3">
+        <div class="p-3 border bg-light text-center mb-3 d-none">
           <h5>Audio</h5>
           <audio controls id="audio-stream" class="w-100">
             <p>Your browser does not support the audio element.</p>
@@ -72,6 +72,10 @@
 
         <div class="p-3 border bg-light text-center">
           <h5>DataChannel</h5>
+            <div class="mb-2 d-flex gap-2 justify-content-center">
+              <button class="btn btn-success" id="valve-on-btn" disabled>Valve On</button>
+              <button class="btn btn-danger" id="valve-off-btn" disabled>Valve Off</button>
+            </div>
             <textarea id="datachannel-input" class="form-control" rows="12"></textarea>
         </div>
       </div>
@@ -163,7 +167,12 @@ pc.ondatachannel = () => {
 }
 
 datachannel.onclose = () => {
-  console.log('datachannel has closed');
+  console.log('[DC] closed. readyState=', datachannel.readyState);
+  updateTextarea("--- datachannel closed ---");
+}
+datachannel.onerror = (e) => {
+  console.log('[DC] error:', e);
+  updateTextarea("--- datachannel error: " + (e.error && e.error.message) + " ---");
 }
 
 function updateTextarea(text) {
@@ -174,29 +183,68 @@ function updateTextarea(text) {
   textarea.scrollTop = textarea.scrollHeight;
 }
 
+function sendOnDataChannel(msg) {
+  if (datachannel.readyState !== "open") {
+    console.log('[DC] cannot send, readyState=', datachannel.readyState);
+    return;
+  }
+  console.log('[DC] sending:', msg);
+  updateTextarea(">>> " + msg);
+  datachannel.send(msg);
+}
+
 datachannel.onopen = () => {
   console.log('datachannel has opened');
-  console.log('sending ping');
+  document.getElementById("valve-on-btn").disabled = false;
+  document.getElementById("valve-off-btn").disabled = false;
   setInterval(() => {
-    console.log('sending ping');
-    updateTextarea("ping");
-    datachannel.send("ping");
+    sendOnDataChannel("ping");
   }, 1000);
 }
 
+document.getElementById("valve-on-btn").addEventListener("click", () => {
+  sendOnDataChannel("valve_on");
+});
+document.getElementById("valve-off-btn").addEventListener("click", () => {
+  sendOnDataChannel("valve_off");
+});
+
 datachannel.onmessage = (e) => {
-  if (e.data.byteLength === undefined) {
-    console.log(e.data);
-    updateTextarea("<<<" + e.data);
+  console.log('[DC] onmessage fired. type=', typeof e.data, 'data=', e.data);
+  if (typeof e.data === "string") {
+    console.log('[DC] string message:', e.data);
+    updateTextarea("<<< " + e.data);
+  } else if (e.data instanceof ArrayBuffer) {
+    var bytes = new Uint8Array(e.data);
+    // Try to decode as UTF-8 text first — pong may arrive as binary
+    var asText = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+    var isPrintable = /^[\x09\x0A\x0D\x20-\x7E]+$/.test(asText);
+    console.log('[DC] binary message, length=', bytes.length, 'first bytes=',
+      Array.from(bytes.slice(0, 16)).map(b => b.toString(16).padStart(2,'0')).join(' '),
+      'asText=', JSON.stringify(asText));
+    if (isPrintable && bytes.length < 64) {
+      // Looks like a short text payload (e.g. "pong") sent as binary
+      updateTextarea("<<< (bin) " + asText);
+    } else {
+      var blob = new Blob([bytes], { type: "image/jpeg" });
+      var urlCreator = window.URL || window.webkitURL;
+      var imageUrl = urlCreator.createObjectURL(blob);
+      document.getElementById('img-stream').src = imageUrl;
+    }
+  } else if (e.data instanceof Blob) {
+    console.log('[DC] blob message, size=', e.data.size);
+    e.data.text().then(t => {
+      console.log('[DC] blob as text:', t);
+      updateTextarea("<<< (blob) " + t);
+    });
   } else {
-    var arrayBufferView = new Uint8Array(e.data);
-    var blob = new Blob( [ arrayBufferView ], { type: "image/jpeg" } );
-    var urlCreator = window.URL || window.webkitURL;
-    var imageUrl = urlCreator.createObjectURL( blob );
-    var imageElement = document.getElementById('img-stream');
-    imageElement.src = imageUrl;
+    console.log('[DC] unknown data type');
+    updateTextarea("<<< (unknown) " + e.data);
   }
 }
+
+// Make sure we receive ArrayBuffer instead of Blob so we can inspect bytes
+datachannel.binaryType = "arraybuffer";
 
 // --- TRICKLE ICE FIX ---
 // Log each candidate as it arrives (for debugging in DevTools console)
