@@ -183,13 +183,14 @@ function updateTextarea(text) {
   textarea.scrollTop = textarea.scrollHeight;
 }
 
-function sendOnDataChannel(msg) {
+function sendOnDataChannel(msg, logLabel) {
   if (datachannel.readyState !== "open") {
     console.log('[DC] cannot send, readyState=', datachannel.readyState);
     return;
   }
-  console.log('[DC] sending:', msg);
-  updateTextarea(">>> " + msg);
+  const line = logLabel ? logLabel + msg : ">>> " + msg;
+  console.log('[DC] sending:', line);
+  updateTextarea(line);
   datachannel.send(msg);
 }
 
@@ -206,14 +207,10 @@ const VALVE_ON_JSON  = '{"name_space":"CDM","seq":0,"content":{"Header":{"cdmmsg
 const VALVE_OFF_JSON = '{"name_space":"CDM","seq":0,"content":{"Header":{"cdmmsgtype":8,"flags":0,"MsgExcID":0},"Body":{"2":[{"0":100,"1":2372,"2":0,"3":{"0":false,"1":"cloud"}}]}}}';
 
 document.getElementById("valve-on-btn").addEventListener("click", () => {
-  console.log('sending cdml for valve on: ' + VALVE_ON_JSON);
-  updateTextarea('sending cdml for valve on: ' + VALVE_ON_JSON);
-  sendOnDataChannel(VALVE_ON_JSON);
+  sendOnDataChannel(VALVE_ON_JSON, 'sending cdml for valve on: ');
 });
 document.getElementById("valve-off-btn").addEventListener("click", () => {
-  console.log('sending cdml for valve off: ' + VALVE_OFF_JSON);
-  updateTextarea('sending cdml for valve off: ' + VALVE_OFF_JSON);
-  sendOnDataChannel(VALVE_OFF_JSON);
+  sendOnDataChannel(VALVE_OFF_JSON, 'sending cdml for valve off: ');
 });
 
 datachannel.onmessage = (e) => {
