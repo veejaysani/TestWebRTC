@@ -23,14 +23,14 @@
 </nav>
   <div class="container mt-4">
     <div class="mb-4">
-      <div class="row mb-2">
-        <div class="col-1">
+      <div class="row mb-2 g-2 align-items-center">
+        <div class="col-12 col-md-1">
           <p class="h5 mb-0">URL:</p>
         </div>
-        <div class="col-7">
-          <p class="h5 mb-0" id="device-url"></p>
+        <div class="col-12 col-md-7">
+          <p class="h5 mb-0 text-break" id="device-url"></p>
         </div>
-        <div class="col-3 d-flex align-items-center gap-4">
+        <div class="col-12 col-md-4 d-flex flex-wrap align-items-center gap-3">
           <div class="form-check form-switch">
             <input class="form-check-input" type="checkbox" id="camera-switch">
             <label class="form-check-label" for="camera-switch">Camera</label>
@@ -39,15 +39,15 @@
             <input class="form-check-input" type="checkbox" id="microphone-switch">
             <label class="form-check-label" for="microphone-switch">Microphone</label>
           </div>
-          <button class="btn btn-outline-dark" id="connect">Connect</button>
+          <button class="btn btn-outline-dark ms-md-auto" id="connect">Connect</button>
         </div>
       </div>
-      <div class="row mb-2">
-        <div class="col-1">
+      <div class="row mb-2 g-2 align-items-center">
+        <div class="col-12 col-md-1">
           <p class="h5 mb-0">Status:</p>
         </div>
-        <div class="col-11">
-          <p class="h5 mb-0" id="status">Disconnected</p>
+        <div class="col-12 col-md-11">
+          <p class="h5 mb-0 text-break" id="status">Disconnected</p>
         </div>
       </div>
     </div>
@@ -199,7 +199,7 @@ datachannel.onopen = () => {
   document.getElementById("valve-off-btn").disabled = false;
   setInterval(() => {
     sendOnDataChannel("ping");
-  }, 1000);
+  }, 60000);
 }
 
 document.getElementById("valve-on-btn").addEventListener("click", () => {
